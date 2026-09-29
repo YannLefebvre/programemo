@@ -1,0 +1,70 @@
+# Pipeline CI/CD PrograMemo — LaForgeEdu (GitLab, apps.education.fr)
+#
+# 1) "test"           : lance la suite pytest (client Grist simulé, aucun
+#                        appel réseau réel) — bloque le déploiement si elle échoue.
+# 2) "deploy_scalingo": pousse le code vers Scalingo par git (SSH), qui
+#                        détecte le Procfile/runtime.txt et rebuild l'API.
+# 3) "pages"           : publie programemo_app.html en tant que page statique
+#                        GitLab Pages, pour héberger le front sans dépendre
+#                        d'un service tiers.
+#
+# Variables CI/CD à définir dans Settings > CI/CD > Variables de ce projet
+# (jamais en clair ici) :
+#   SCALINGO_APP_NAME        nom de l'application Scalingo (ex. programemo-backend)
+#   SCALINGO_SSH_PRIVATE_KEY clé SSH privée dédiée au déploiement (Type "Variable",
+#                             cochée "Protected", valeur multi-lignes complète)
+#   SCALINGO_REGION           optionnel, hôte git de la région Scalingo utilisée
+#                              (par défaut ssh.osc-fr1.scalingo.com — à adapter
+#                              si votre app a été créée dans une autre région)
+
+stages:
+  - test
+  - deploy
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  SCALINGO_REGION: "ssh.osc-fr1.scalingo.com"
+
+cache:
+  paths:
+    - .cache/pip
+
+test:
+  stage: test
+  image: python:3.11
+  script:
+    - pip install --cache-dir="$PIP_CACHE_DIR" -r requirements.txt
+    - pip install --cache-dir="$PIP_CACHE_DIR" pytest httpx
+    - pytest tests/ -v
+
+deploy_scalingo:
+  stage: deploy
+  image: python:3.11
+  needs: ["test"]
+  only:
+    - main
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git openssh-client
+    - mkdir -p ~/.ssh
+    - echo "$SCALINGO_SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H "$SCALINGO_REGION" >> ~/.ssh/known_hosts 2>/dev/null
+  script:
+    - git remote remove scalingo 2>/dev/null || true
+    - git remote add scalingo "git@${SCALINGO_REGION}:${SCALINGO_APP_NAME}.git"
+    # Scalingo attend une branche "master" comme cible de déploiement,
+    # quel que soit le nom de la branche par défaut du dépôt LaForge.
+    - git push scalingo "HEAD:master" --force
+
+pages:
+  stage: deploy
+  image: alpine:3.19
+  needs: []
+  only:
+    - main
+  script:
+    - mkdir -p public
+    - cp programemo_app.html public/index.html
+  artifacts:
+    paths:
+      - public

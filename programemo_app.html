@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrograMemo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Kalam:wght@400;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #F4F1E4; --paper-line:#B9C6D9; --paper-margin:#C85C4C;
+    --ink:#1F3454; --ink-soft:#47597A; --ink-faint:#8593AA;
+    --good:#3F7D5C; --bad:#B23A2E;
+    --board:#1E3B32; --board-2:#26463C; --board-3:#2E5245;
+    --chalk:#F1EDDD; --chalk-dim:#C9D4C6; --chalk-yellow:#E8C468;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Public Sans',sans-serif; background:var(--paper); color:var(--ink); min-height:100vh;}
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0; font-weight:600;}
+  .hand{font-family:'Kalam',cursive;}
+  button{cursor:pointer; font-family:'Public Sans',sans-serif;}
+
+  /* -------- barre de config API -------- */
+  .config-bar{background:var(--ink); color:var(--paper); font-size:12px; padding:6px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .config-bar input{background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.3); color:var(--paper); padding:4px 8px; border-radius:3px; font-size:12px; width:220px;}
+  .config-bar span{opacity:.8;}
+  #err-banner{display:none; background:var(--bad); color:#fff; padding:10px 16px; font-size:13px; text-align:center;}
+  #info-banner{display:none; background:var(--good); color:#fff; padding:10px 16px; font-size:13px; text-align:center;}
+
+  /* -------- login -------- */
+  #screen-login{max-width:380px; margin:60px auto; padding:32px; background:rgba(255,255,255,.4); border:1.5px solid rgba(31,52,84,.2); border-radius:6px;}
+  #screen-login h1{font-size:24px; margin-bottom:6px;}
+  #screen-login p{font-size:13px; color:var(--ink-soft); margin-bottom:20px;}
+  #screen-login label{font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:4px; margin-top:14px;}
+  #screen-login input{width:100%; padding:9px 10px; border:1.5px solid var(--ink-faint); border-radius:var(--radius); font-size:14px; background:#fff;}
+  #screen-login button{width:100%; margin-top:20px; background:var(--ink); color:var(--paper); border:none; padding:11px; border-radius:var(--radius); font-weight:700; letter-spacing:.03em; font-size:13px;}
+
+  /* -------- vue élève (cahier) -------- */
+  #screen-eleve{max-width:760px; margin:0 auto; padding:30px 24px 80px;}
+  .top-row{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .btn-ghost{background:transparent; border:1.5px solid var(--ink); color:var(--ink); padding:7px 14px; border-radius:var(--radius); font-size:12.5px; font-weight:600;}
+  .cahier-page{background:repeating-linear-gradient(var(--paper) 0 27px, var(--paper-line) 27px 28px), var(--paper); padding:30px 26px; border-radius:3px; box-shadow:0 12px 30px -20px rgba(31,52,84,.4);}
+  .reprise-card{border:1.5px solid rgba(31,52,84,.18); border-radius:var(--radius); background:rgba(255,255,255,.4); padding:16px 18px; margin-bottom:14px;}
+  .reprise-tag{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:var(--ink); color:var(--paper);}
+  .reprise-notion{font-family:'Fraunces',serif; font-size:17px; margin-top:8px;}
+  .q-block{margin:14px 0; padding-top:12px; border-top:1px dashed rgba(31,52,84,.25);}
+  .q-text{font-size:14.5px; margin-bottom:8px;}
+  textarea.reponse{width:100%; min-height:54px; border:none; border-bottom:1.5px solid var(--ink-faint); background:transparent; font-family:'Kalam',cursive; font-size:15px; padding:4px;}
+  .qcm-opt{display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--radius); border:1.5px solid rgba(31,52,84,.2); margin-bottom:6px; cursor:pointer; font-size:14px;}
+  .qcm-opt.correct{border-color:var(--good); background:rgba(63,125,92,.12);}
+  .qcm-opt.wrong{border-color:var(--bad); background:rgba(178,58,46,.12);}
+  .valider-btn{margin-top:6px; background:var(--ink); color:var(--paper); border:none; padding:8px 18px; border-radius:var(--radius); font-weight:700; font-size:12.5px;}
+  .score-pill{display:block; margin-top:8px; font-size:13px; font-weight:700;}
+  .score-pill.ok{color:var(--good);} .score-pill.ko{color:var(--bad);}
+  .empty-msg{text-align:center; padding:40px 10px; color:var(--ink-soft); font-family:'Kalam',cursive; font-size:16px;}
+  .reprise-tag.retard{background:var(--paper-margin);}
+  .eleve-tabs{display:flex; gap:16px; margin-bottom:14px;}
+  .eleve-tabs button{background:none; border:none; color:var(--ink-soft); font-weight:600; font-size:13px; padding:6px 0; border-bottom:2px solid transparent;}
+  .eleve-tabs button.active{color:var(--ink); border-bottom-color:var(--ink);}
+  .entrainement-row{padding:10px 0; border-bottom:1px solid rgba(31,52,84,.12); display:flex; justify-content:space-between; align-items:center; font-size:14px; cursor:pointer;}
+  .entrainement-row:hover{color:var(--ink-soft);}
+  .correction-box{margin-top:6px; padding:8px 10px; background:rgba(63,125,92,.08); border:1px dashed var(--good); border-radius:var(--radius); font-size:13.5px;}
+
+  /* -------- vue prof (tableau) -------- */
+  #screen-prof{max-width:960px; margin:0 auto; padding:26px 22px 80px; background:var(--board); color:var(--chalk); min-height:100vh;}
+  #screen-prof .top-row .btn-ghost{border-color:var(--chalk-dim); color:var(--chalk-dim);}
+  .tabs{display:flex; gap:20px; margin:18px 0; border-bottom:1px solid rgba(241,237,221,.2);}
+  .tabs button{background:none; border:none; color:var(--chalk-dim); font-weight:600; font-size:13px; padding:8px 0; position:relative;}
+  .tabs button.active{color:var(--chalk-yellow);}
+  .tabs button.active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--chalk-yellow);}
+  .panel{display:none;} .panel.active{display:block;}
+  .board-card{background:var(--board-2); border:1px solid rgba(241,237,221,.12); border-radius:6px; padding:18px 20px; margin-bottom:16px;}
+  .board-card h3{font-size:15px; color:var(--chalk); margin-bottom:12px; font-weight:500;}
+  .field-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+  .field-row input, .field-row select, .field-row textarea{background:var(--board-3); border:1px solid rgba(241,237,221,.25); color:var(--chalk); padding:8px 10px; border-radius:4px; font-size:13px;}
+  .field-row input::placeholder, .field-row textarea::placeholder{color:var(--chalk-dim);}
+  .btn-chalk{background:var(--chalk-yellow); color:var(--board); border:none; padding:8px 16px; border-radius:4px; font-weight:700; font-size:12.5px;}
+  .notion-row{padding:10px 0; border-bottom:1px solid rgba(241,237,221,.1); font-size:13.5px;}
+  .notion-row b{font-family:'Fraunces',serif; font-size:15px; font-weight:500;}
+  table.results{width:100%; border-collapse:collapse; font-size:13px;}
+  table.results th{text-align:left; color:var(--chalk-dim); font-size:11px; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid rgba(241,237,221,.2);}
+  table.results td{padding:8px; border-bottom:1px solid rgba(241,237,221,.08);}
+  .mdp-result{margin-top:10px; padding:10px; background:rgba(232,196,104,.12); border:1px solid var(--chalk-yellow); border-radius:4px; font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="config-bar">
+  <span>URL de l'API :</span>
+  <input id="api-base" value="http://localhost:8000">
+  <span id="conn-status" class="hand"></span>
+</div>
+<div id="err-banner"></div>
+<div id="info-banner"></div>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="screen-login">
+  <h1>PrograMemo</h1>
+  <p class="hand">Connecte-toi pour accéder à tes reprises ou à ton planning.</p>
+  <label>Identifiant</label>
+  <input id="login-identifiant" placeholder="ex. lea.dupont ou email">
+  <label>Mot de passe</label>
+  <input id="login-mdp" type="password">
+  <button onclick="seConnecter()">Se connecter</button>
+</div>
+
+<!-- ===================== ÉLÈVE ===================== -->
+<div id="screen-eleve" style="display:none">
+  <div class="top-row">
+    <h2 id="eleve-titre">Mes reprises du jour</h2>
+    <button class="btn-ghost" onclick="seDeconnecter()">Se déconnecter</button>
+  </div>
+  <div class="eleve-tabs">
+    <button class="active" onclick="ongletEleve('reprises', this)">Mes reprises</button>
+    <button onclick="ongletEleve('entrainement', this)">S'entraîner</button>
+  </div>
+  <div class="cahier-page" id="eleve-contenu">
+    <div class="empty-msg">Chargement…</div>
+  </div>
+  <div class="cahier-page" id="eleve-entrainement" style="display:none">
+    <div class="empty-msg">Chargement…</div>
+  </div>
+</div>
+
+<!-- ===================== PROF ===================== -->
+<div id="screen-prof" style="display:none">
+  <div class="top-row">
+    <h2>Espace professeur</h2>
+    <button class="btn-ghost" onclick="seDeconnecter()">Se déconnecter</button>
+  </div>
+
+  <div class="field-row">
+    <select id="prof-classe-select" onchange="chargerTout()" style="min-width:220px;">
+      <option value="">— choisissez une classe —</option>
+    </select>
+  </div>
+
+  <div class="tabs">
+    <button class="active" onclick="ongletProf('planning', this)">Planning</button>
+    <button onclick="ongletProf('resultats', this)">Résultats</button>
+    <button onclick="ongletProf('eleves', this)">Élèves</button>
+    <button id="tab-admin" onclick="ongletProf('admin', this)" style="display:none">Administration</button>
+  </div>
+
+  <div class="panel active" id="panel-planning">
+    <div class="board-card">
+      <h3>Ajouter une notion</h3>
+      <div class="field-row">
+        <input id="notion-date" type="date">
+        <input id="notion-titre" placeholder="Titre de la notion" style="flex:1; min-width:200px;">
+        <button class="btn-chalk" onclick="ajouterNotion()">+ Ajouter</button>
+      </div>
+    </div>
+    <div class="board-card">
+      <h3>Ajouter une question à une notion existante</h3>
+      <div class="field-row">
+        <input id="q-notion-id" type="number" placeholder="id de la notion" style="width:140px">
+        <input id="q-ordre" type="number" placeholder="ordre" style="width:80px" value="1">
+        <input id="q-enonce" placeholder="Énoncé de la question" style="flex:1; min-width:220px;">
+      </div>
+      <div class="field-row">
+        <input id="q-reponse" placeholder="Réponse attendue (version ouverte)" style="flex:1; min-width:220px;">
+      </div>
+      <div class="field-row">
+        <input id="q-options" placeholder="Options QCM séparées par des virgules (la 1ère = la bonne)" style="flex:1; min-width:320px;">
+        <button class="btn-chalk" onclick="ajouterQuestion()">+ Ajouter la question</button>
+      </div>
+    </div>
+    <div class="board-card">
+      <h3>Notions de la classe</h3>
+      <div id="liste-notions"><span class="hand" style="color:var(--chalk-dim)">Chargez une classe pour voir ses notions.</span></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-resultats">
+    <div class="board-card">
+      <div class="field-row">
+        <input id="res-notion-id" type="number" placeholder="id de la notion">
+        <button class="btn-chalk" onclick="chargerResultats()">Voir les résultats</button>
+      </div>
+      <div id="tableau-resultats"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-eleves">
+    <div class="board-card">
+      <h3>Générer un mot de passe élève</h3>
+      <div class="field-row">
+        <input id="mdp-eleve-id" type="number" placeholder="id de l'élève">
+        <button class="btn-chalk" onclick="genererMotDePasse()">Générer</button>
+      </div>
+      <div id="mdp-resultat"></div>
+    </div>
+    <div class="board-card">
+      <h3>Générer les mots de passe de toute la classe</h3>
+      <p class="hand" style="font-size:13px; color:var(--chalk-dim); margin:0 0 10px;">
+        Régénère un mot de passe pour CHAQUE élève de la classe sélectionnée en haut de page — utile en début d'année. Les anciens mots de passe cessent immédiatement de fonctionner.
+      </p>
+      <div class="field-row">
+        <button class="btn-chalk" onclick="genererMotsDePasseClasse()">Générer pour toute la classe</button>
+      </div>
+      <div id="mdp-masse-resultat"></div>
+    </div>
+    <div class="board-card">
+      <h3>Mon mot de passe (enseignant)</h3>
+      <p class="hand" style="font-size:13px; color:var(--chalk-dim); margin:0 0 10px;">
+        Laissez le champ vide pour générer un mot de passe automatiquement, ou choisissez le vôtre (6 caractères minimum).
+      </p>
+      <div class="field-row">
+        <input id="mon-mdp-choix" type="text" placeholder="Nouveau mot de passe (optionnel)" style="flex:1; min-width:220px;">
+        <button class="btn-chalk" onclick="changerMonMotDePasse()">Changer mon mot de passe</button>
+      </div>
+      <div id="mon-mdp-resultat"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-admin">
+    <div class="board-card">
+      <h3>Enseignants</h3>
+      <p class="hand" style="font-size:13px; color:var(--chalk-dim); margin:0 0 10px;">
+        Réservé aux enseignants administrateurs. Aucun souci de confidentialité au sein de l'équipe : vous pouvez régénérer le mot de passe d'un collègue directement.
+      </p>
+      <div id="liste-enseignants"><span class="hand" style="color:var(--chalk-dim)">Chargement…</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let session = { token: null, role: null };
+
+// Stockage de session tolérant : sessionStorage permet de garder la
+// connexion active après un F5, mais reste indisponible dans certains
+// contextes sandboxés (ex. aperçu intégré d'un fichier dans une conversation
+// Claude) — on ne doit jamais planter l'appli pour autant, juste perdre
+// la persistance dans ce cas précis.
+const stockageSession = {
+  lire() {
+    try {
+      const brut = sessionStorage.getItem('programemo_session');
+      return brut ? JSON.parse(brut) : null;
+    } catch (e) { return null; }
+  },
+  ecrire(valeur) {
+    try { sessionStorage.setItem('programemo_session', JSON.stringify(valeur)); }
+    catch (e) { /* stockage indisponible dans ce contexte, on continue sans persistance */ }
+  },
+  effacer() {
+    try { sessionStorage.removeItem('programemo_session'); } catch (e) {}
+  }
+};
+
+function apiBase(){ return document.getElementById('api-base').value.replace(/\/$/, ''); }
+
+function afficherErreur(msg){
+  const banner = document.getElementById('err-banner');
+  banner.textContent = msg;
+  banner.style.display = 'block';
+  setTimeout(() => banner.style.display = 'none', 6000);
+}
+
+function afficherInfo(msg){
+  const banner = document.getElementById('info-banner');
+  banner.textContent = msg;
+  banner.style.display = 'block';
+  setTimeout(() => banner.style.display = 'none', 4000);
+}
+
+async function api(path, { method = 'GET', body = null, auth = true } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth && session.token) headers['Authorization'] = 'Bearer ' + session.token;
+  let resp;
+  try {
+    resp = await fetch(apiBase() + path, { method, headers, body: body ? JSON.stringify(body) : null });
+  } catch (e) {
+    afficherErreur("Impossible de joindre l'API à " + apiBase() + " — le serveur uvicorn tourne-t-il ? " + e.message);
+    throw e;
+  }
+  if (!resp.ok) {
+    let detail = resp.statusText;
+    try { detail = (await resp.json()).detail || detail; } catch (_) {}
+    afficherErreur(`Erreur ${resp.status} sur ${path} : ${JSON.stringify(detail)}`);
+    if (resp.status === 401 && auth) {
+      // Jeton expiré ou invalide : on nettoie la session persistée et on
+      // renvoie au login plutôt que de laisser l'appli dans un état incohérent.
+      stockageSession.effacer();
+      session = { token: null, role: null };
+      afficherEspace();
+    }
+    throw new Error(detail);
+  }
+  return resp.status === 204 ? null : resp.json();
+}
+
+function afficherEspace() {
+  document.getElementById('screen-login').style.display = session.token ? 'none' : 'block';
+  document.getElementById('screen-eleve').style.display = session.token && session.role === 'eleve' ? 'block' : 'none';
+  document.getElementById('screen-prof').style.display = session.token && session.role === 'enseignant' ? 'block' : 'none';
+  if (session.token && session.role === 'eleve') chargerReprises();
+  if (session.token && session.role === 'enseignant') {
+    chargerMesClasses();
+    document.getElementById('tab-admin').style.display = session.est_administrateur ? 'inline-block' : 'none';
+    if (session.est_administrateur) chargerEnseignants();
+  }
+}
+
+// Au chargement de la page, on tente de reprendre une session existante
+// (survit à un F5) plutôt que de repartir systématiquement sur l'écran de connexion.
+(function restaurerSession() {
+  const sauvegarde = stockageSession.lire();
+  if (sauvegarde && sauvegarde.token) {
+    session = sauvegarde;
+    afficherEspace();
+  }
+})();
+
+// ---------------------------------------------------------------- auth
+async function seConnecter() {
+  const identifiant = document.getElementById('login-identifiant').value.trim();
+  const mot_de_passe = document.getElementById('login-mdp').value;
+  if (!identifiant || !mot_de_passe) { afficherErreur("Identifiant et mot de passe requis."); return; }
+  try {
+    const data = await api('/auth/login', { method: 'POST', body: { identifiant, mot_de_passe }, auth: false });
+    session.token = data.access_token;
+    session.role = data.role;
+    session.est_administrateur = !!data.est_administrateur;
+    stockageSession.ecrire(session);
+    afficherEspace();
+  } catch (_) { /* erreur déjà affichée par api() */ }
+}
+
+function seDeconnecter() {
+  session = { token: null, role: null };
+  stockageSession.effacer();
+  document.getElementById('screen-eleve').style.display = 'none';
+  document.getElementById('screen-prof').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'block';
+  document.getElementById('login-mdp').value = '';
+}
+
+// ---------------------------------------------------------------- élève
+async function chargerReprises() {
+  const conteneur = document.getElementById('eleve-contenu');
+  conteneur.innerHTML = '<div class="empty-msg">Chargement…</div>';
+  let reprises;
+  try { reprises = await api('/eleve/reprises-du-jour'); } catch (_) { return; }
+
+  if (!reprises.length) {
+    conteneur.innerHTML = '<div class="empty-msg">Aucune reprise prévue aujourd\'hui — reviens demain !</div>';
+    return;
+  }
+
+  conteneur.innerHTML = '';
+  for (const notion of reprises) {
+    const carte = document.createElement('div');
+    carte.className = 'reprise-card';
+    carte.innerHTML = `
+      <span class="reprise-tag${notion.en_retard ? ' retard' : ''}">${notion.palier_label.trim()}${notion.en_retard ? ' · en retard' : ''}</span>
+      <div class="reprise-notion">${notion.titre}</div>
+    `;
+    for (const q of notion.questions) {
+      const bloc = document.createElement('div');
+      bloc.className = 'q-block';
+      if (q.options_qcm && q.options_qcm.length) {
+        bloc.innerHTML = `<div class="q-text">${q.enonce}</div>` +
+          q.options_qcm.map(o => `<div class="qcm-opt" data-question="${q.id}" data-option="${o.id}" data-palier="${notion.palier_id}" onclick="repondreQCM(this)">${o.texte_option}</div>`).join('') +
+          `<div class="score-pill" id="score-${q.id}"></div>`;
+      } else {
+        bloc.innerHTML = `<div class="q-text">${q.enonce}</div>` +
+          `<textarea class="reponse" id="txt-${q.id}" placeholder="Écris ta réponse ici…"></textarea>` +
+          `<button class="valider-btn" onclick="repondreOuverte(${q.id}, ${notion.palier_id})">Valider</button>` +
+          `<div class="score-pill" id="score-${q.id}"></div>`;
+      }
+      carte.appendChild(bloc);
+    }
+    conteneur.appendChild(carte);
+  }
+}
+
+async function repondreQCM(el) {
+  const question_id = parseInt(el.dataset.question);
+  const option_choisie_id = parseInt(el.dataset.option);
+  const palier_id = parseInt(el.dataset.palier);
+  let resultat;
+  try {
+    resultat = await api('/eleve/reponses/qcm', { method: 'POST', body: { question_id, palier_id, option_choisie_id } });
+  } catch (_) { return; }
+
+  document.querySelectorAll(`[data-question="${question_id}"]`).forEach(opt => {
+    const idOpt = parseInt(opt.dataset.option);
+    if (idOpt === resultat.option_correcte_id) opt.classList.add('correct');
+    else if (idOpt === option_choisie_id) opt.classList.add('wrong');
+    opt.onclick = null;
+  });
+  const pill = document.getElementById('score-' + question_id);
+  pill.textContent = resultat.est_correcte ? '✓ Bonne réponse' : '✗ Ce n\'était pas la bonne réponse';
+  pill.className = 'score-pill ' + (resultat.est_correcte ? 'ok' : 'ko');
+}
+
+async function repondreOuverte(question_id, palier_id) {
+  const texte_reponse = document.getElementById('txt-' + question_id).value.trim();
+  if (!texte_reponse) { afficherErreur("Écris une réponse avant de valider."); return; }
+  try {
+    await api('/eleve/reponses/ouverte', { method: 'POST', body: { question_id, palier_id, texte_reponse } });
+  } catch (_) { return; }
+  const pill = document.getElementById('score-' + question_id);
+  pill.textContent = '✓ Réponse envoyée';
+  pill.className = 'score-pill ok';
+  document.getElementById('txt-' + question_id).disabled = true;
+}
+
+// ------------------------------------------------------- élève : entraînement
+function ongletEleve(nom, btn) {
+  document.querySelectorAll('.eleve-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const estReprises = nom === 'reprises';
+  document.getElementById('eleve-contenu').style.display = estReprises ? 'block' : 'none';
+  document.getElementById('eleve-entrainement').style.display = estReprises ? 'none' : 'block';
+  document.getElementById('eleve-titre').textContent = estReprises ? 'Mes reprises du jour' : "S'entraîner";
+  if (!estReprises) chargerListeEntrainement();
+}
+
+async function chargerListeEntrainement() {
+  const conteneur = document.getElementById('eleve-entrainement');
+  conteneur.innerHTML = '<div class="empty-msg">Chargement…</div>';
+  let notions;
+  try { notions = await api('/eleve/entrainement'); } catch (_) { return; }
+  if (!notions.length) { conteneur.innerHTML = '<div class="empty-msg">Aucune notion vue pour l\'instant.</div>'; return; }
+  conteneur.innerHTML = '<p class="hand" style="color:var(--ink-soft); margin-top:0;">Rejouez librement une notion déjà vue — la correction s\'affiche tout de suite, ça ne compte pas dans vos résultats officiels.</p>' +
+    notions.map(n => `<div class="entrainement-row" onclick="ouvrirEntrainement(${n.notion_id})"><span>${n.date_jour} — <b>${n.titre}</b></span><span class="hand">▸</span></div>`).join('') +
+    '<div id="entrainement-detail"></div>';
+}
+
+async function ouvrirEntrainement(notionId) {
+  const zone = document.getElementById('entrainement-detail');
+  zone.innerHTML = '<div class="empty-msg">Chargement…</div>';
+  let notion;
+  try { notion = await api(`/eleve/entrainement/${notionId}`); } catch (_) { return; }
+  zone.innerHTML = `<h3 style="margin:16px 0 10px;">${notion.titre}</h3>` +
+    notion.questions.map(q => {
+      if (q.options_qcm && q.options_qcm.length) {
+        return `<div class="q-block">
+          <div class="q-text">${q.enonce}</div>
+          ${q.options_qcm.map(o => `<div class="qcm-opt" data-question="${q.id}" data-option="${o.id}" onclick="repondreEntrainementQCM(this)">${o.texte_option}</div>`).join('')}
+          <div class="score-pill" id="entrainement-score-${q.id}"></div>
+        </div>`;
+      }
+      return `<div class="q-block">
+        <div class="q-text">${q.enonce}</div>
+        <div class="correction-box">Réponse attendue : ${q.reponse_attendue}</div>
+      </div>`;
+    }).join('');
+}
+
+async function repondreEntrainementQCM(el) {
+  const question_id = parseInt(el.dataset.question);
+  const option_choisie_id = parseInt(el.dataset.option);
+  let resultat;
+  try {
+    resultat = await api('/eleve/entrainement/reponse-qcm', { method: 'POST', body: { question_id, option_choisie_id } });
+  } catch (_) { return; }
+  document.querySelectorAll(`[data-question="${question_id}"]`).forEach(opt => {
+    const idOpt = parseInt(opt.dataset.option);
+    if (idOpt === resultat.option_correcte_id) opt.classList.add('correct');
+    else if (idOpt === option_choisie_id) opt.classList.add('wrong');
+    opt.onclick = null;
+  });
+  const pill = document.getElementById('entrainement-score-' + question_id);
+  pill.textContent = resultat.est_correcte ? '✓ Bonne réponse' : '✗ Ce n\'était pas la bonne réponse';
+  pill.className = 'score-pill ' + (resultat.est_correcte ? 'ok' : 'ko');
+}
+
+// ---------------------------------------------------------------- prof
+function ongletProf(nom, btn) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + nom).classList.add('active');
+}
+
+function classeId() {
+  const v = parseInt(document.getElementById('prof-classe-select').value);
+  if (!v) { afficherErreur("Choisissez d'abord une classe dans la liste."); return null; }
+  return v;
+}
+
+async function chargerMesClasses() {
+  let classes;
+  try { classes = await api('/prof/mes-classes'); } catch (_) { return; }
+  const select = document.getElementById('prof-classe-select');
+  const valeurActuelle = select.value;
+  select.innerHTML = '<option value="">— choisissez une classe —</option>' +
+    classes.map(c => `<option value="${c.id}">${c.nom} (${c.role})</option>`).join('');
+  if (valeurActuelle) select.value = valeurActuelle;
+  else if (classes.length === 1) { select.value = classes[0].id; chargerTout(); }
+}
+
+async function chargerTout() { await chargerNotions(); }
+
+async function chargerNotions() {
+  const cid = classeId(); if (!cid) return;
+  let notions;
+  try { notions = await api(`/prof/classes/${cid}/notions`); } catch (_) { return; }
+  const conteneur = document.getElementById('liste-notions');
+  if (!notions.length) { conteneur.innerHTML = '<span class="hand" style="color:var(--chalk-dim)">Aucune notion pour cette classe.</span>'; return; }
+  conteneur.innerHTML = '';
+  for (const n of notions) {
+    const bloc = document.createElement('div');
+    bloc.className = 'notion-row';
+    bloc.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <span><b>#${n.id}</b> — ${n.date_jour} — <b>${n.titre || '(sans titre)'}</b> — ${n.enseignant_nom}</span>
+        <span>
+          <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="basculerEditionNotion(${n.id}, this)">Modifier</button>
+          <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="basculerQuestions(${n.id}, this)">Questions</button>
+        </span>
+      </div>
+      <div id="edit-notion-${n.id}" style="display:none; margin-top:8px;"></div>
+      <div id="questions-${n.id}" style="display:none; margin-top:10px;"></div>
+    `;
+    bloc._notion = n;
+    conteneur.appendChild(bloc);
+  }
+}
+
+function basculerEditionNotion(notionId, btn) {
+  const zone = document.getElementById('edit-notion-' + notionId);
+  if (zone.style.display === 'block') { zone.style.display = 'none'; return; }
+  const n = btn.closest('.notion-row')._notion;
+  zone.innerHTML = `
+    <div class="field-row">
+      <input type="date" id="edit-date-${notionId}" value="${n.date_jour}">
+      <input id="edit-titre-${notionId}" value="${n.titre || ''}" placeholder="Titre" style="flex:1;">
+      <button class="btn-chalk" onclick="enregistrerNotion(${notionId})">Enregistrer</button>
+    </div>`;
+  zone.style.display = 'block';
+}
+
+async function enregistrerNotion(notionId) {
+  const date_jour = document.getElementById('edit-date-' + notionId).value;
+  const titre = document.getElementById('edit-titre-' + notionId).value.trim();
+  try {
+    await api(`/prof/notions/${notionId}`, { method: 'PATCH', body: { date_jour, titre } });
+  } catch (_) { return; }
+  chargerNotions();
+}
+
+async function basculerQuestions(notionId, btn) {
+  const zone = document.getElementById('questions-' + notionId);
+  if (zone.style.display === 'block') { zone.style.display = 'none'; return; }
+  let questions;
+  try { questions = await api(`/prof/notions/${notionId}/questions`); } catch (_) { return; }
+  zone.innerHTML = questions.length
+    ? questions.map(q => rendreQuestionEditable(q)).join('')
+    : '<span class="hand" style="color:var(--chalk-dim); font-size:13px;">Aucune question pour cette notion.</span>';
+  zone.style.display = 'block';
+}
+
+function rendreQuestionEditable(q) {
+  const optionsTexte = q.options.map(o => o.texte_option).join(', ');
+  const indexBonne = q.options.findIndex(o => o.est_correcte);
+  return `
+    <div style="border-top:1px dashed rgba(241,237,221,.15); padding:10px 0;">
+      <div style="font-size:13px; color:var(--chalk-dim); margin-bottom:6px;">Question #${q.id} (ordre ${q.ordre})</div>
+      <div class="field-row">
+        <input id="qedit-enonce-${q.id}" value="${q.enonce.replace(/"/g, '&quot;')}" style="flex:1; min-width:220px;">
+      </div>
+      <div class="field-row">
+        <input id="qedit-reponse-${q.id}" value="${(q.reponse_attendue || '').replace(/"/g, '&quot;')}" placeholder="Réponse attendue" style="flex:1; min-width:220px;">
+      </div>
+      <div class="field-row">
+        <input id="qedit-options-${q.id}" value="${optionsTexte.replace(/"/g, '&quot;')}" placeholder="Options séparées par des virgules" style="flex:1; min-width:260px;">
+        <input id="qedit-indexbonne-${q.id}" type="number" value="${indexBonne >= 0 ? indexBonne : 0}" style="width:60px;" title="Index (0 = 1ère option) de la bonne réponse">
+        <button class="btn-chalk" onclick="enregistrerQuestion(${q.id})">Enregistrer</button>
+      </div>
+    </div>`;
+}
+
+async function enregistrerQuestion(questionId) {
+  const enonce = document.getElementById('qedit-enonce-' + questionId).value.trim();
+  const reponse_attendue = document.getElementById('qedit-reponse-' + questionId).value.trim();
+  const optionsBrutes = document.getElementById('qedit-options-' + questionId).value.trim();
+  const index_bonne_option = parseInt(document.getElementById('qedit-indexbonne-' + questionId).value) || 0;
+  const options_qcm = optionsBrutes ? optionsBrutes.split(',').map(s => s.trim()).filter(Boolean) : [];
+  try {
+    await api(`/prof/questions/${questionId}`, {
+      method: 'PATCH',
+      body: { enonce, reponse_attendue, options_qcm, index_bonne_option }
+    });
+  } catch (_) { return; }
+  afficherInfo("Question mise à jour.");
+}
+
+async function ajouterNotion() {
+  const cid = classeId(); if (!cid) return;
+  const date_jour = document.getElementById('notion-date').value;
+  const titre = document.getElementById('notion-titre').value.trim();
+  if (!date_jour || !titre) { afficherErreur("Date et titre requis."); return; }
+  try {
+    await api(`/prof/classes/${cid}/notions`, { method: 'POST', body: { date_jour, titre } });
+  } catch (_) { return; }
+  document.getElementById('notion-titre').value = '';
+  chargerNotions();
+}
+
+async function ajouterQuestion() {
+  const notion_id = parseInt(document.getElementById('q-notion-id').value);
+  const ordre = parseInt(document.getElementById('q-ordre').value) || 1;
+  const enonce = document.getElementById('q-enonce').value.trim();
+  const reponse_attendue = document.getElementById('q-reponse').value.trim();
+  const optionsBrutes = document.getElementById('q-options').value.trim();
+  if (!notion_id || !enonce) { afficherErreur("Id de notion et énoncé requis."); return; }
+  const options_qcm = optionsBrutes ? optionsBrutes.split(',').map(s => s.trim()).filter(Boolean) : [];
+  try {
+    await api(`/prof/notions/${notion_id}/questions`, {
+      method: 'POST',
+      body: { ordre, enonce, reponse_attendue, format: 'natif', contenu_h5p_url: null, options_qcm, index_bonne_option: 0 }
+    });
+  } catch (_) { return; }
+  document.getElementById('q-enonce').value = '';
+  document.getElementById('q-reponse').value = '';
+  document.getElementById('q-options').value = '';
+  afficherInfo("Question ajoutée avec succès.");
+}
+
+async function chargerResultats() {
+  const cid = classeId(); if (!cid) return;
+  const notion_id = parseInt(document.getElementById('res-notion-id').value);
+  if (!notion_id) { afficherErreur("Id de notion requis."); return; }
+  let lignes;
+  try { lignes = await api(`/prof/classes/${cid}/resultats?notion_id=${notion_id}`); } catch (_) { return; }
+  const conteneur = document.getElementById('tableau-resultats');
+  if (!lignes.length) { conteneur.innerHTML = '<p class="hand" style="color:var(--chalk-dim)">Aucun élève dans cette classe.</p>'; return; }
+  conteneur.innerHTML = `<table class="results"><tr><th>Élève</th><th>Réponse ouverte</th><th>Score QCM</th></tr>` +
+    lignes.map(l => `<tr><td>${l.eleve_nom}</td><td>${l.reponse_ouverte || '—'}</td><td>${l.score_qcm || '—'}</td></tr>`).join('') +
+    `</table>`;
+}
+
+async function genererMotDePasse() {
+  const eleve_id = parseInt(document.getElementById('mdp-eleve-id').value);
+  if (!eleve_id) { afficherErreur("Id de l'élève requis."); return; }
+  let res;
+  try { res = await api(`/prof/eleves/${eleve_id}/generer-mot-de-passe`, { method: 'POST' }); } catch (_) { return; }
+  document.getElementById('mdp-resultat').innerHTML =
+    `<div class="mdp-result">Identifiant : <b>${res.identifiant_connexion}</b><br>Mot de passe (à noter maintenant, non ré-affichable) : <b>${res.mot_de_passe_clair}</b></div>`;
+}
+
+async function genererMotsDePasseClasse() {
+  const cid = classeId(); if (!cid) return;
+  if (!confirm("Régénérer le mot de passe de TOUS les élèves de cette classe ? Les anciens mots de passe cesseront de fonctionner immédiatement.")) return;
+  let resultats;
+  try { resultats = await api(`/prof/classes/${cid}/generer-mots-de-passe`, { method: 'POST' }); } catch (_) { return; }
+  const conteneur = document.getElementById('mdp-masse-resultat');
+  if (!resultats.length) { conteneur.innerHTML = '<p class="hand" style="color:var(--chalk-dim)">Aucun élève dans cette classe.</p>'; return; }
+  conteneur.innerHTML = `<table class="results"><tr><th>Identifiant</th><th>Mot de passe (à noter maintenant)</th></tr>` +
+    resultats.map(r => `<tr><td>${r.identifiant_connexion}</td><td><b>${r.mot_de_passe_clair}</b></td></tr>`).join('') +
+    `</table>`;
+  afficherInfo(`${resultats.length} mot(s) de passe régénéré(s) — pensez à les noter ou les imprimer, ils ne seront plus jamais réaffichés.`);
+}
+
+async function chargerEnseignants() {
+  let enseignants;
+  try { enseignants = await api('/prof/enseignants'); } catch (_) { return; }
+  const conteneur = document.getElementById('liste-enseignants');
+  if (!enseignants.length) { conteneur.innerHTML = '<span class="hand" style="color:var(--chalk-dim)">Aucun enseignant.</span>'; return; }
+  conteneur.innerHTML = enseignants.map(e => `
+    <div class="notion-row" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <span><b>${e.nom}</b> — ${e.email}${e.est_administrateur ? ' <span class="hand" style="color:var(--chalk-yellow)">(administrateur)</span>' : ''}</span>
+      <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="genererMotDePasseEnseignant(${e.id}, this)">Régénérer son mot de passe</button>
+    </div>
+    <div id="mdp-ens-${e.id}"></div>
+  `).join('');
+}
+
+async function genererMotDePasseEnseignant(enseignant_id, btn) {
+  if (!confirm("Régénérer le mot de passe de cet enseignant ? Son mot de passe actuel cessera de fonctionner immédiatement.")) return;
+  let res;
+  try { res = await api(`/prof/enseignants/${enseignant_id}/generer-mot-de-passe`, { method: 'POST' }); } catch (_) { return; }
+  document.getElementById('mdp-ens-' + enseignant_id).innerHTML =
+    `<div class="mdp-result">Identifiant : <b>${res.identifiant_connexion}</b><br>Nouveau mot de passe (à transmettre maintenant, non ré-affichable) : <b>${res.mot_de_passe_clair}</b></div>`;
+}
+
+async function changerMonMotDePasse() {
+  const choix = document.getElementById('mon-mdp-choix').value.trim();
+  let res;
+  try {
+    res = await api('/prof/mon-mot-de-passe', {
+      method: 'POST',
+      body: { nouveau_mot_de_passe: choix || null }
+    });
+  } catch (_) { return; }
+  document.getElementById('mon-mdp-choix').value = '';
+  document.getElementById('mon-mdp-resultat').innerHTML =
+    `<div class="mdp-result">Identifiant : <b>${res.identifiant_connexion}</b><br>Nouveau mot de passe (à noter maintenant, non ré-affichable) : <b>${res.mot_de_passe_clair}</b></div>`;
+  afficherInfo("Mot de passe mis à jour — pensez à le noter, il ne sera plus jamais affiché.");
+}
+</script>
+</body>
+</html>
