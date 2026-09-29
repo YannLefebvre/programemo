@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PrograMemo — back-end
 
 Couche applicative entre le front élève/professeur et Grist. Voir
