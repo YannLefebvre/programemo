@@ -37,10 +37,14 @@ variables:
   # d'hôte "docker" — sans DOCKER_HOST, le client docker cherche par défaut
   # un démon local (unix:///var/run/docker.sock), qui n'existe pas ici, d'où
   # l'erreur "Cannot connect to the Docker daemon" constatée en pratique.
-  DOCKER_HOST: "tcp://docker:2376"
-  DOCKER_TLS_CERTDIR: "/certs"
-  DOCKER_TLS_VERIFY: "1"
-  DOCKER_CERT_PATH: "/certs/client"
+  # TLS désactivé entre "build" et le service "docker" : sur l'exécuteur
+  # Kubernetes de LaForgeEdu, le volume "/certs" censé être partagé entre les
+  # deux conteneurs du même pod ne l'est pas de façon fiable, ce qui produit
+  # "open /certs/client/ca.pem: no such file or directory" avec TLS activé.
+  # Les deux conteneurs étant de toute façon isolés dans le même pod, le
+  # canal non chiffré (port 2375) est sans risque ici.
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
 
 cache:
   paths:
