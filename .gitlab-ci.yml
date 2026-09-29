@@ -32,7 +32,15 @@ stages:
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   IMAGE_NAME: "$DOCKERHUB_USERNAME/programemo-backend"
+  # Le service "docker:24-dind" fait tourner le démon Docker dans un
+  # conteneur séparé, joignable sur le réseau interne du job sous le nom
+  # d'hôte "docker" — sans DOCKER_HOST, le client docker cherche par défaut
+  # un démon local (unix:///var/run/docker.sock), qui n'existe pas ici, d'où
+  # l'erreur "Cannot connect to the Docker daemon" constatée en pratique.
+  DOCKER_HOST: "tcp://docker:2376"
   DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_TLS_VERIFY: "1"
+  DOCKER_CERT_PATH: "/certs/client"
 
 cache:
   paths:
