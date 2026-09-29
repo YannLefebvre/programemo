@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # PrograMemo — back-end
 
 Couche applicative entre le front élève/professeur et Grist. Voir
@@ -54,14 +53,17 @@ tests/
   test_flux_eleve.py
 ```
 
-## Déploiement (LaForgeEdu + Scalingo)
+## Déploiement (LaForgeEdu + Docker Hub + Render)
 
-Le dépôt est prêt à être poussé tel quel : `Procfile`, `runtime.txt`,
-`.gitlab-ci.yml` et `programemo_app.html` (le front) sont déjà à la racine.
-Le pipeline CI/CD (`.gitlab-ci.yml`) lance les tests, déploie l'API sur
-Scalingo par SSH, et publie le front en GitLab Pages à chaque push sur `main`.
+Le dépôt est prêt à être poussé tel quel : `Dockerfile`, `.gitlab-ci.yml` et
+`programemo_app.html` (le front) sont déjà à la racine. Le pipeline CI/CD
+lance les tests, construit une image Docker de l'API et la pousse sur
+Docker Hub (Render ne sachant pas construire directement depuis une
+instance GitLab auto-hébergée), déclenche un déploiement Render à partir de
+cette image, et publie le front en GitLab Pages — tout ça à chaque push sur
+`main`.
 
-Marche à suivre complète : voir `deploiement_laforge_scalingo.md`.
+Marche à suivre complète : voir `deploiement_laforge_render.md`.
 
 ## Ce qui reste à faire avant une mise en production
 
@@ -69,8 +71,8 @@ Marche à suivre complète : voir `deploiement_laforge_scalingo.md`.
   `structure_tables_grist_programemo.md`, avec ses Access Rules
   (`access_rules_grist_programemo.md`), et y importer le calendrier
   (`generer_calendrier_grist.py`).
-- Renseigner les variables d'environnement de production sur Scalingo (clé
+- Renseigner les variables d'environnement de production sur Render (clé
   API Grist, secret JWT généré aléatoirement — jamais la valeur d'exemple),
-  cf. `deploiement_laforge_scalingo.md` section 4.
+  cf. `deploiement_laforge_render.md` section 4.
 - Une fois l'URL du front connue (GitLab Pages), resserrer
   `PROGRAMEMO_CORS_ALLOW_ORIGINS` à cette URL au lieu de `"*"`.
