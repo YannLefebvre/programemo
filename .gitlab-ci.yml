@@ -44,7 +44,11 @@ test:
   script:
     - pip install --cache-dir="$PIP_CACHE_DIR" -r requirements.txt
     - pip install --cache-dir="$PIP_CACHE_DIR" pytest httpx
-    - pytest tests/ -v
+    # "python -m pytest" (et non "pytest" seul) : ajoute automatiquement le
+    # dossier courant (donc le package "app") au chemin de recherche des
+    # modules Python — sans quoi l'import "from app import ..." échoue avec
+    # ModuleNotFoundError dans cet environnement CI (constaté en pratique).
+    - python -m pytest tests/ -v
 
 build_image:
   stage: build
